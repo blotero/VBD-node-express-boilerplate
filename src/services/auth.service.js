@@ -1,4 +1,7 @@
 const httpStatus = require('http-status');
+const jwt = require('jsonwebtoken');
+const moment = require('moment');
+const config = require('../config/config');
 const tokenService = require('./token.service');
 const userService = require('./user.service');
 const Token = require('../models/token.model');
@@ -52,6 +55,26 @@ const refreshAuth = async (refreshToken) => {
 };
 
 /**
+ * Refresh access token
+ * @param {string} refreshToken
+ * @returns {Promise<Object>}
+ */
+const refreshAccessToken = async (refreshToken) => {
+  try {
+    const payload = jwt.verify(refreshToken, config.jwt.secret);
+    const user = await userService.getUserById(payload.sub);
+    if (!user) {
+      throw new Error();
+    }
+    const expires = moment().add(config.jwt.accessExpirationMinutes, 'minutes');
+    const accessToken = tokenService.generateToken(user.id, expires, tokenTypes.ACCESS);
+    return { token: accessToken, expires: expires.toDate() };
+  } catch (error) {
+    throw new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate');
+  }
+};
+
+/**
  * Reset password
  * @param {string} resetPasswordToken
  * @param {string} newPassword
@@ -94,6 +117,7 @@ module.exports = {
   loginUserWithEmailAndPassword,
   logout,
   refreshAuth,
+  refreshAccessToken,
   resetPassword,
   verifyEmail,
 };
