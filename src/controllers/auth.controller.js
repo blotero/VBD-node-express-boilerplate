@@ -1,5 +1,7 @@
 const httpStatus = require('http-status');
+const ApiError = require('../utils/ApiError');
 const catchAsync = require('../utils/catchAsync');
+const { tokenTypes } = require('../config/tokens');
 const { authService, userService, tokenService, emailService } = require('../services');
 
 const register = catchAsync(async (req, res) => {
@@ -21,8 +23,13 @@ const logout = catchAsync(async (req, res) => {
 });
 
 const refreshTokens = catchAsync(async (req, res) => {
-  const tokens = await authService.refreshAuth(req.body.refreshToken);
-  res.send({ ...tokens });
+  const refreshTokenDoc = await tokenService.verifyToken(req.body.refreshToken, tokenTypes.REFRESH).catch(() => null);
+  const user = refreshTokenDoc && (await userService.getUserById(refreshTokenDoc.user));
+  if (!user) {
+    throw new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate');
+  }
+  const tokens = await tokenService.generateAuthTokens(user);
+  res.send({ user, ...tokens });
 });
 
 const forgotPassword = catchAsync(async (req, res) => {
