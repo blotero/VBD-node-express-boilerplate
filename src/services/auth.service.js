@@ -1,4 +1,6 @@
 const httpStatus = require('http-status');
+const jwt = require('jsonwebtoken');
+const config = require('../config/config');
 const tokenService = require('./token.service');
 const userService = require('./user.service');
 const Token = require('../models/token.model');
@@ -39,12 +41,23 @@ const logout = async (refreshToken) => {
  */
 const refreshAuth = async (refreshToken) => {
   try {
-    const refreshTokenDoc = await tokenService.verifyToken(refreshToken, tokenTypes.REFRESH);
+    const payload = jwt.verify(refreshToken, config.jwt.secret);
+    if (payload.type !== tokenTypes.REFRESH) {
+      throw new Error();
+    }
+    const refreshTokenDoc = await Token.findOneAndDelete({
+      token: refreshToken,
+      type: tokenTypes.REFRESH,
+      user: payload.sub,
+      blacklisted: false,
+    });
+    if (!refreshTokenDoc) {
+      throw new Error();
+    }
     const user = await userService.getUserById(refreshTokenDoc.user);
     if (!user) {
       throw new Error();
     }
-    await refreshTokenDoc.remove();
     return tokenService.generateAuthTokens(user);
   } catch (error) {
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate');
