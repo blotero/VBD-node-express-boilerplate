@@ -86,6 +86,25 @@ const generateAuthTokens = async (user) => {
 };
 
 /**
+ * Exchange a refresh token for a new set of auth tokens
+ * @param {string} refreshToken
+ * @returns {Promise<Object>}
+ */
+const exchangeRefreshToken = async (refreshToken) => {
+  const payload = jwt.verify(refreshToken, config.jwt.secret);
+  const query = { token: refreshToken, type: tokenTypes.REFRESH, user: payload.sub };
+  const refreshTokenDoc = await Token.findOneAndUpdate(query, { blacklisted: true });
+  if (!refreshTokenDoc) {
+    throw new Error('Token not found');
+  }
+  const user = await userService.getUserById(refreshTokenDoc.user);
+  if (!user) {
+    throw new Error('User not found');
+  }
+  return generateAuthTokens(user);
+};
+
+/**
  * Generate reset password token
  * @param {string} email
  * @returns {Promise<string>}
@@ -118,6 +137,7 @@ module.exports = {
   saveToken,
   verifyToken,
   generateAuthTokens,
+  exchangeRefreshToken,
   generateResetPasswordToken,
   generateVerifyEmailToken,
 };
