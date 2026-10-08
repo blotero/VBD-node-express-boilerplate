@@ -1,5 +1,4 @@
 const httpStatus = require('http-status');
-const jwt = require('jsonwebtoken');
 const moment = require('moment');
 const config = require('../config/config');
 const tokenService = require('./token.service');
@@ -61,8 +60,8 @@ const refreshAuth = async (refreshToken) => {
  */
 const refreshAccessToken = async (refreshToken) => {
   try {
-    const payload = jwt.verify(refreshToken, config.jwt.secret);
-    const user = await userService.getUserById(payload.sub);
+    const refreshTokenDoc = await tokenService.verifyToken(refreshToken, tokenTypes.REFRESH);
+    const user = await userService.getUserById(refreshTokenDoc.user);
     if (!user) {
       throw new Error();
     }
