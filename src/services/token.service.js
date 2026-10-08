@@ -92,7 +92,7 @@ const generateAuthTokens = async (user) => {
  */
 const exchangeRefreshToken = async (refreshToken) => {
   const payload = jwt.verify(refreshToken, config.jwt.secret);
-  const query = { token: refreshToken, type: tokenTypes.REFRESH, user: payload.sub };
+  const query = { token: refreshToken, type: tokenTypes.REFRESH, user: payload.sub, blacklisted: false };
   const refreshTokenDoc = await Token.findOneAndUpdate(query, { blacklisted: true });
   if (!refreshTokenDoc) {
     throw new Error('Token not found');
